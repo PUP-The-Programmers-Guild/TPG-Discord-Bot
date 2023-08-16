@@ -5,10 +5,12 @@ from datetime import datetime
 from discord.utils import get
 from keep_alive import keep_alive
 from help import help
+import reactions
 
 # sets up intent that will be requested
 intents = discord.Intents.default()
 intents.message_content = True
+intents.reactions = True
 
 # initializes the bot
 client = discord.Client(intents=intents)
@@ -34,8 +36,9 @@ async def on_message(message):
         writer = csv.DictWriter(file, fieldnames=fieldnames)
         writer.writeheader()
 
+    worked = False
     # checks if its the right time then add it to the csv
-    with open(path, newline='') as file:
+    with open(path, "r", newline='') as file:
         reader = csv.DictReader(file)
         for row in reader:
             if user_id == row["Discord ID"]:
@@ -45,10 +48,13 @@ async def on_message(message):
                     is_time = True
                     row["Date"] = datetime.now().strftime("%m/%d/%Y")
                     row["Days"] = int(row["Days"]) + 1
-                    await message.add_reaction("💚")
-                updated_row.append(row)
+                    worked = True  
+            updated_row.append(row)
         print(updated_row)
 
+    if worked:
+      await message.add_reaction("💚")
+      print("added emoji")
     if is_time:
       with open(path, "w", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fieldnames)
@@ -63,6 +69,7 @@ async def on_message(message):
             "Date": str(time),
             "Days": 1
         })
+        await message.add_reaction("💚")
 
   if message.author == client.user:
     return
@@ -82,6 +89,12 @@ async def on_message(message):
     message_id = message.id
     await log(str(author), str(user_id), str(now), message)
     print("it works")
+
+  if message.channel.id in [1140322273753047070, 1025693891065827338]:
+    contents = reactions.get_message_reactions(message)
+    for emoji, equivalent in contents.items():
+      print(f"emoji: {emoji}\nequivalent: {equivalent}")
+    await reactions.add_reactions(message)
 
   # list of commands
   if message.content.startswith("+"):
@@ -106,8 +119,47 @@ async def on_message(message):
                 f"{message.author} is still not in the records")
     elif message.content[1:] == "help":
         await message.channel.send(help())
+    elif message.content[1:] == "reactions":
+      channel = client.get_channel(1025693891065827338)
+      reacted = await channel.fetch_message(1026515967330750464)
+      contents = reacted.content.split("\n")
+      for content in contents[1:]:
+        print(content[0:5])
+        print(content[6:])
+    elif message.content[1:] == "see_emoji":
+      await message.add_reaction("💚")
+      await message.add_reaction("💚")
 
+@client.event
+async def on_raw_reaction_add(reaction):
+  if reaction.channel_id in [1140322273753047070, 1025693891065827338]:
+    channel = client.get_channel(reaction.channel_id)
+    user = reaction.member
+    message = await channel.fetch_message(reaction.message_id)
+    emoji = str(reaction.emoji)
+    print("emoji name", reaction.emoji.name)
+    print(emoji)
+    print(user)
+    print(message)
+    await reactions.assign_role(emoji, user, message)
 
+@client.event
+async def on_raw_reaction_remove(reaction):
+  if reaction.channel_id in [1140322273753047070, 1025693891065827338]:
+    channel = client.get_channel(reaction.channel_id)
+    print(channel)
+    message = await channel.fetch_message(reaction.message_id)
+    print(message)
+    guild = client.get_guild(reaction.guild_id) 
+    print(guild)
+    user = await guild.fetch_member(reaction.user_id)
+    emoji = str(reaction.emoji)
+    print("emoji name", reaction.emoji.name)
+    print(emoji)
+    print(user)
+    print(reaction.user_id)
+    print(message)
+    await reactions.remove_role(emoji, user, message)
 
 
 keep_alive()
