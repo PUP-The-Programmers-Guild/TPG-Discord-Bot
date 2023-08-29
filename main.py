@@ -3,30 +3,23 @@ from discord.ext import commands, tasks
 import os
 import sqlite3
 import csv
-from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime
 from pytz import timezone
-from dotenv import load_dotenv
 
-load_dotenv()
-
-# sets up intent that will be requested
 intents = discord.Intents.default()
 intents.message_content = True
 intents.reactions = True
 
-# initializes the bot
 client = commands.Bot(command_prefix="+", intents=intents)
 
 @tasks.loop(minutes=1)
 async def scheduled_message():
-  channel = client.get_channel(1143347614532767835)
   current_time = str(
       datetime.now(timezone("Asia/Manila")).strftime("%I:%M%p")).lstrip("0").lower()
   conn = sqlite3.connect("database/100DOC.db")
   c = conn.cursor()
 
-  c.execute(f"""
+  c.execute("""
               SELECT *
               FROM Notifications""")
   users = c.fetchall()
@@ -45,11 +38,11 @@ async def scheduled_message():
     if scheduled_time == current_time:
       c.execute(f"""
                 DELETE FROM Notifications
-                WHERE Discord_ID = {users[0][1]} AND 
+                WHERE Discord_ID = {users[0][1]} AND
                 Scheduled_Time = '{users[0][2]}'""")
       conn.commit()
       await user.send(f"{user} its time to log!")
-      
+
 
 
 @client.event
@@ -93,13 +86,11 @@ async def compute_streak(ctx):
           point_record[user_name] += 1
           time_record[user_name] = time_stamp
           print("point_added")
-        elif int(
-            time_stamp[3:5]) != int(time_record[user_name][3:5]) - 1 and not (
-                int(time_stamp[3:5]) == int(time_record[user_name][3:5])):
+        elif int(time_stamp[3:5]) != int(time_record[user_name][3:5]):
           point_record[user_name] = 0
           time_record[user_name] = time_stamp
           print("point_resetted")
-      elif user_name not in time_record:
+      else:
         point_record[user_name] = 1
         time_record[user_name] = time_stamp
         print("not in record")
@@ -177,4 +168,5 @@ async def load():
     print(extension)
     await client.load_extension(extension)
 
-client.run(os.getenv("TOKEN"))
+
+client.run(os.environ['TOKEN'])
