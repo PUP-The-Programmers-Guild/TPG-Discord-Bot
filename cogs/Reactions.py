@@ -1,3 +1,5 @@
+import discord
+from discord.utils import get
 from discord.ext import commands
 import reactions
 import sys
@@ -11,8 +13,9 @@ class Reactions(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, ctx):
-        if ctx.channel.id in [1140322273753047070, 1025693891065827338]:
-            await reactions.add_reactions(ctx)
+      if ctx.channel.id in [1140322273753047070, 1025693891065827338]:
+        await reactions.add_reactions(ctx)
+
 
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, reaction):
@@ -33,7 +36,6 @@ class Reactions(commands.Cog):
             emoji = str(reaction.emoji)
 
             await reactions.remove_role(emoji, user, message)
-
 
 async def setup(client):
     await client.add_cog(Reactions(client))

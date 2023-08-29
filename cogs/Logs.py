@@ -85,7 +85,7 @@ class Logs(commands.Cog):
               WHERE Discord_Name = '{author}'
               """)
             user = c.fetchall()
-            streak = 0
+            streak = 1
             print(user)
 
             yesterday = (datetime.now() - timedelta(1)).strftime("%m/%d/%Y")
