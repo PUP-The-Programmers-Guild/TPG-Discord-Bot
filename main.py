@@ -5,6 +5,7 @@ import sqlite3
 import csv
 from datetime import datetime
 from pytz import timezone
+from keep_alive import keep_alive
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -12,10 +13,12 @@ intents.reactions = True
 
 client = commands.Bot(command_prefix="+", intents=intents)
 
+
 @tasks.loop(minutes=1)
 async def scheduled_message():
   current_time = str(
-      datetime.now(timezone("Asia/Manila")).strftime("%I:%M%p")).lstrip("0").lower()
+      datetime.now(
+          timezone("Asia/Manila")).strftime("%I:%M%p")).lstrip("0").lower()
   conn = sqlite3.connect("database/100DOC.db")
   c = conn.cursor()
 
@@ -31,7 +34,7 @@ async def scheduled_message():
     print(scheduled_time == current_time)
     print("checked notification:", current_time)
 
-    print(users[0][1])
+    print(user[1])
     user = await client.fetch_user(users[0][1])
     print(user)
 
@@ -42,7 +45,6 @@ async def scheduled_message():
                 Scheduled_Time = '{users[0][2]}'""")
       conn.commit()
       await user.send(f"{user} its time to log!")
-
 
 
 @client.event
@@ -58,13 +60,13 @@ async def on_ready():
 
 @client.command()
 async def show_db(ctx, table):
-    conn = sqlite3.connect("database/100DOC.db")
-    c = conn.cursor()
+  conn = sqlite3.connect("database/100DOC.db")
+  c = conn.cursor()
 
-    c.execute(f"""
+  c.execute(f"""
               SELECT *
               FROM {table}""")
-    print(c.fetchall())
+  print(c.fetchall())
 
 
 @client.command()
@@ -138,14 +140,12 @@ async def update_db(ctx):
 
 
 @client.command()
-async def notify_me(ctx, sched):
+async def notify_me(ctx, *scheds):
+  sched = ' '.join(scheds)
   if len(sched) < 5:
-      if "am" in sched.lower():
-          suffix = "am"
-      else:
-          suffix = "pm"
-      sched_time = sched[:-2].strip()
-      sched = f"{sched_time}:00{suffix}"
+    suffix = "am" if "am" in sched.lower() else "pm"
+    sched_time = sched[:-2].strip()
+    sched = f"{sched_time}:00{suffix}"
   conn = sqlite3.connect("database/100DOC.db")
   c = conn.cursor()
 
@@ -154,7 +154,7 @@ async def notify_me(ctx, sched):
               VALUES ({ctx.author.id},
                       '{sched.replace(" ", "")}')""")
   conn.commit()
-  await ctx.channel.send("Done")
+  await ctx.message.add_reaction("💚")
 
 
 initial_extensions = [
@@ -169,4 +169,5 @@ async def load():
     await client.load_extension(extension)
 
 
+keep_alive()
 client.run(os.environ['TOKEN'])
