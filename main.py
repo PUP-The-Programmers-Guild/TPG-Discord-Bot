@@ -3,7 +3,7 @@ from discord.ext import commands, tasks
 import os
 import sqlite3
 import csv
-from datetime import datetime
+from datetime import datetime, timedelta
 from pytz import timezone
 from keep_alive import keep_alive
 
@@ -67,6 +67,70 @@ async def show_db(ctx, table):
               SELECT *
               FROM {table}""")
   print(c.fetchall())
+  
+@client.command()
+async def save_logs(ctx):
+  today = datetime.now().strftime("%m/%d/%Y")
+  yesterday = (datetime.now() - timedelta(days = 1)).strftime("%m/%d/%Y")
+  channel = client.get_channel(1045330081175842887)
+  
+  async for text in channel.history(limit=1000):
+    user_id = text.author.id
+    time_stamp = text.created_at.strftime("%m/%d/%Y")
+    right_prefix = text.content.lower().startswith("day")
+    bolded_prefix = text.content.lower().startswith("**day")
+  
+    if time_stamp in (today, yesterday) and user_id != 1139419364177756212:
+      if not text.reactions and (right_prefix or bolded_prefix):
+        print(text.author)
+        author = text.author
+        user_id = author.id
+        message_log_id = text.id
+        message_log = await channel.fetch_message(message_log_id)
+        print(message_log)
+
+        conn = sqlite3.connect("database/100DOC.db")
+        c = conn.cursor()
+
+        c.execute(f"""
+          SELECT Discord_Name, Date, Streak_Count
+          FROM Logs l INNER JOIN Users u
+            ON l.Discord_ID = u.Discord_ID
+          WHERE Discord_Name = '{author}'
+          """)
+        user = c.fetchall()
+        print(user)
+
+        yesterday = (datetime.now() - timedelta(1)).strftime("%m/%d/%Y")
+        
+        if user and user[0][1] != today:
+            streak = user[0][2] + 1 if user[0][1] == yesterday else 1
+            c.execute(f"""
+                    UPDATE Logs
+                    SET Log_Count = Log_Count + 1,
+                    Date = '{today}',
+                    Streak_Count = {streak}
+                    WHERE Discord_ID = {user_id}""")
+            conn.commit()
+            await text.add_reaction("💚")
+        elif not user:
+            c.execute(f"""
+                    INSERT INTO Users
+                    VALUES (
+                        {user_id},
+                        '{author}')""")
+            conn.commit()
+            c.execute(f"""
+            INSERT INTO Logs (Discord_ID, Log_Count, Date, Streak_Count)
+            VALUES (
+                {user_id},
+                0,
+                '{today}',
+                0,
+                1)""")
+            conn.commit()
+            await text.add_reaction("💚")
+        print("it works")
 
 
 @client.command()

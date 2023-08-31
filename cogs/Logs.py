@@ -48,6 +48,12 @@ class Logs(commands.Cog):
                 await ctx.add_reaction("💚")
             elif not user:
                 c.execute(f"""
+                        INSERT INTO Users
+                        VALUES (
+                            {user_id},
+                            '{author}')""")
+                conn.commit()
+                c.execute(f"""
                 INSERT INTO Logs (Discord_ID, Log_Count, Date, Streak, Streak_Count)
                 VALUES (
                     {user_id},
@@ -55,12 +61,6 @@ class Logs(commands.Cog):
                     '{time}',
                     0,
                     1)""")
-                conn.commit()
-                c.execute(f"""
-                        INSERT INTO Users
-                        VALUES (
-                            {user_id},
-                            '{author}')""")
                 conn.commit()
                 await ctx.add_reaction("💚")
             print("it works")
